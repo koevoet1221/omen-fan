@@ -1,0 +1,6 @@
+#exclude target
+target/
+#exclude .DS_Store
+.DS_Store
+#exclude .idea
+.idea/
