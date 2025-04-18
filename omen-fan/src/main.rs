@@ -1,10 +1,10 @@
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::process::exit;
 use std::thread::sleep;
 use std::time::Duration;
 
-const EC_DEVICE: &str = "/dev/ec";
+const EC_IO_FILE: &str = "/sys/kernel/debug/ec/ec0/io";
 const FAN1_OFFSET: u64 = 0x34; // Fan 1 Speed Set (units of 100RPM)
 const FAN2_OFFSET: u64 = 0x35; // Fan 2 Speed Set (units of 100RPM)
 const CPU_TEMP_OFFSET: u64 = 0x57; // CPU Temp (°C)
@@ -14,11 +14,7 @@ const FAN1_MAX: u8 = 55; // Max speed for Fan 1
 const FAN2_MAX: u8 = 57; // Max speed for Fan 2
 
 fn read_ec_register(offset: u64) -> u8 {
-    let mut file = OpenOptions::new()
-        .read(true)
-        .write(false)
-        .open(EC_DEVICE)
-        .expect("Failed to open /dev/ec. Ensure you have the necessary permissions.");
+    let mut file = File::open(EC_IO_FILE).expect("Failed to open EC IO file. Ensure you have the necessary permissions.");
     file.seek(SeekFrom::Start(offset))
         .expect("Failed to seek to EC register.");
     let mut buffer = [0u8; 1];
@@ -29,10 +25,9 @@ fn read_ec_register(offset: u64) -> u8 {
 
 fn write_ec_register(offset: u64, value: u8) {
     let mut file = OpenOptions::new()
-        .read(false)
         .write(true)
-        .open(EC_DEVICE)
-        .expect("Failed to open /dev/ec. Ensure you have the necessary permissions.");
+        .open(EC_IO_FILE)
+        .expect("Failed to open EC IO file. Ensure you have the necessary permissions.");
     file.seek(SeekFrom::Start(offset))
         .expect("Failed to seek to EC register.");
     file.write_all(&[value])
