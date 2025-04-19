@@ -4,6 +4,7 @@
 - Also has a service that actively adjusts the fan speed according to tempertatures (cause the default BIOS control sucks)
 - Supports enabling boost mode via sysfs
 - Made and tested on an Omen 16-c0140AX
+- Rust made and tested on Omen 16-n0xxx series and Omen 15-dc10xxxx
 
 # WARNING
 - Forcing this program to run on incompatible laptops may cause hardware damage. Use at your own risk.
@@ -17,3 +18,4 @@
 -copy the target from release folder
 -sudo cp /var/home/user-name/omen-fan/omen-fan/target/release/omen-fan /usr/local/bin/
 replace user
+--Then add service file to the system.
