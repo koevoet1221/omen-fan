@@ -1,5 +1,7 @@
 #exclude target
 target/
+/target
+/omen-fan/target
 #exclude .DS_Store
 .DS_Store
 #exclude .idea
