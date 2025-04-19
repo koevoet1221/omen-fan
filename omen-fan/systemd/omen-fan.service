@@ -1,0 +1,11 @@
+[Unit]
+Description=Omen Fan Control Service
+After=multi-user.target
+
+[Service]
+ExecStart=/path/to/your/project/target/release/omen-fan
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
