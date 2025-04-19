@@ -49,9 +49,9 @@ fn disable_bios_control() {
     write_ec_register(BIOS_CONTROL_OFFSET, 0x06); // Disable BIOS control
 }
 
-fn enable_bios_control() {
-    write_ec_register(BIOS_CONTROL_OFFSET, 0x00); // Enable BIOS control
-}
+// fn enable_bios_control() {
+//    write_ec_register(BIOS_CONTROL_OFFSET, 0x00); // Enable BIOS control
+// }
 
 fn main() {
     if !nix::unistd::Uid::effective().is_root() {
@@ -61,8 +61,8 @@ fn main() {
 
     disable_bios_control();
 
-    let temp_curve = [50, 60, 70, 80, 87, 93];
-    let speed_curve = [20, 40, 60, 70, 85, 100];
+    let temp_curve = [45, 55, 60, 70, 75, 80, 85, 93];
+    let speed_curve = [0, 20, 30, 60, 70, 80, 90, 100];
     let idle_speed = 0;
     let poll_interval = Duration::from_secs(1);
 
@@ -84,8 +84,8 @@ fn main() {
             (s0 as usize + ((s1 - s0) as usize * (temp - t0) as usize / (t1 - t0) as usize)) as u8
         };
 
-        let fan1_speed = FAN1_MAX * (speed as u8) / 100;
-        let fan2_speed = FAN2_MAX * (speed as u8) / 100;
+        let fan1_speed = ((FAN1_MAX as u16 * speed as u16) / 100) as u8;
+        let fan2_speed = ((FAN2_MAX as u16 * speed as u16) / 100) as u8;
 
         if previous_speed != (fan1_speed, fan2_speed) {
             set_fan_speed(fan1_speed, fan2_speed);

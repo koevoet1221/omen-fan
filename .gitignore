@@ -6,3 +6,5 @@ target/
 .DS_Store
 #exclude .idea
 .idea/
+ /omen-fan-1/
+omen-fan-1/
