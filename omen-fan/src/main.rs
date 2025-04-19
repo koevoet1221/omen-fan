@@ -3,6 +3,9 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use std::process::exit;
 use std::thread::sleep;
 use std::time::Duration;
+use std::process::Command;
+use std::fs;
+use std::path::Path;
 
 const EC_IO_FILE: &str = "/sys/kernel/debug/ec/ec0/io";
 const FAN1_OFFSET: u64 = 0x34; // Fan 1 Speed Set (units of 100RPM)
@@ -12,6 +15,37 @@ const GPU_TEMP_OFFSET: u64 = 0xB7; // GPU Temp (°C)
 const BIOS_CONTROL_OFFSET: u64 = 0x62; // BIOS Control
 const FAN1_MAX: u8 = 55; // Max speed for Fan 1
 const FAN2_MAX: u8 = 57; // Max speed for Fan 2
+const CONFIG_FILE: &str = "/etc/omen-fan/config.toml";
+
+fn generate_config_file() {
+    if !Path::new(CONFIG_FILE).exists() {
+        println!("Configuration file not found. Generating default config...");
+        let default_config = r#"
+[service]
+TEMP_CURVE =  [45, 55, 60, 70, 75, 80, 85, 93]
+SPEED_CURVE = [37, 45, 50, 60, 70, 80, 90, 100]
+IDLE_SPEED = 0
+POLL_INTERVAL = 1
+"#;
+        fs::create_dir_all("/etc/omen-fan").expect("Failed to create config directory.");
+        fs::write(CONFIG_FILE, default_config).expect("Failed to write default config.");
+        println!("Default configuration file created at {}", CONFIG_FILE);
+    }
+}
+
+fn load_ec_sys_module() {
+    // Check if the `ec_sys` module is loaded
+    let output = Command::new("lsmod")
+        .output()
+        .expect("Failed to execute `lsmod` command.");
+    if !String::from_utf8_lossy(&output.stdout).contains("ec_sys") {
+        // Load the `ec_sys` module with write support
+        Command::new("modprobe")
+            .args(&["ec_sys", "write_support=1"])
+            .status()
+            .expect("Failed to load `ec_sys` module.");
+    }
+}
 
 fn read_ec_register(offset: u64) -> u8 {
     let mut file = File::open(EC_IO_FILE).expect("Failed to open EC IO file. Ensure you have the necessary permissions.");
@@ -59,10 +93,13 @@ fn main() {
         exit(1);
     }
 
-    disable_bios_control();
+     // Perform setup tasks
+     load_ec_sys_module();
+     generate_config_file();
+     disable_bios_control();
 
     let temp_curve = [45, 55, 60, 70, 75, 80, 85, 93];
-    let speed_curve = [0, 20, 30, 60, 70, 80, 90, 100];
+    let speed_curve = [37, 45, 50, 60, 70, 80, 90, 100];
     let idle_speed = 0;
     let poll_interval = Duration::from_secs(1);
 
