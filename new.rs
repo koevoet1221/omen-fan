@@ -107,3 +107,77 @@ fn main() {
         sleep(poll_interval);
     }
 }
+
+
+fn calculate_fan_speed(temp: u8, temp_min: u8, temp_max: u8, speed_min: u8, speed_max: u8) -> u8 {
+    if temp <= temp_min {
+        speed_min
+    } else if temp >= temp_max {
+        speed_max
+    } else {
+        // Quadratic interpolation for smoother curve
+        let normalized_temp = (temp - temp_min) as f32 / (temp_max - temp_min) as f32;
+        let interpolated_speed = speed_min as f32 + (speed_max - speed_min) as f32 * normalized_temp.powi(2);
+        interpolated_speed.round() as u8
+    }
+}
+
+
+fn calculate_poll_interval(prev_temp: u8, current_temp: u8) -> Duration {
+    let temp_diff = (current_temp as i8 - prev_temp as i8).abs();
+    if temp_diff > 5 {
+        Duration::from_millis(500) // Fast updates for rapid temperature changes
+    } else if temp_diff > 2 {
+        Duration::from_secs(1) // Moderate updates for small changes
+    } else {
+        Duration::from_secs(5) // Slow updates for stable temperatures
+    }
+}
+
+
+fn get_max_temp() -> u8 {
+    let cpu_temp = read_ec_register(CPU_TEMP_OFFSET);
+    let gpu_temp = read_ec_register(GPU_TEMP_OFFSET);
+    cpu_temp.max(gpu_temp)
+}
+
+
+
+fn main() {
+    if !nix::unistd::Uid::effective().is_root() {
+        eprintln!("Root access is required to run this program.");
+        exit(1);
+    }
+
+    disable_bios_control();
+
+    let temp_min = 45;
+    let temp_max = 93;
+    let speed_min = 0;
+    let speed_max = 100;
+
+    let mut previous_speed = (0, 0);
+    let mut previous_temp = get_max_temp();
+    let mut poll_interval = Duration::from_secs(1);
+
+    loop {
+        let current_temp = get_max_temp();
+
+        // Calculate fan speed using smoother curve
+        let speed = calculate_fan_speed(current_temp, temp_min, temp_max, speed_min, speed_max);
+
+        let fan1_speed = ((FAN1_MAX as u16 * speed as u16) / 100) as u8;
+        let fan2_speed = ((FAN2_MAX as u16 * speed as u16) / 100) as u8;
+
+        if previous_speed != (fan1_speed, fan2_speed) {
+            set_fan_speed(fan1_speed, fan2_speed);
+            previous_speed = (fan1_speed, fan2_speed);
+        }
+
+        // Dynamically adjust the polling interval
+        poll_interval = calculate_poll_interval(previous_temp, current_temp);
+        previous_temp = current_temp;
+
+        sleep(poll_interval);
+    }
+}
