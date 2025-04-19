@@ -8,3 +8,6 @@ target/
 .idea/
  /omen-fan-1/
 omen-fan-1/
+/systemd/
+/systemd
+/omen-fan/systemd/
