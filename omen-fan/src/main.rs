@@ -4,7 +4,7 @@ use std::process::exit;
 use std::thread::sleep;
 use std::time::Duration;
 use std::process::Command;
-use std::fs;
+use std::{fs, vec};
 use std::path::Path;
 
 const EC_IO_FILE: &str = "/sys/kernel/debug/ec/ec0/io";
@@ -84,14 +84,6 @@ fn disable_bios_control() {
     write_ec_register(BIOS_CONTROL_OFFSET, 0x06); // Disable BIOS control
 }
 
-// fn performance() -> u8 {
-//    let perf_offset: u8 =  read_ec_register(PERFORMANCE_OFFSET);
-//    if perf_offset != 0x31 {
-//        write_ec_register(PERFORMANCE_OFFSET, 0x31);
-//    }
-//    perf_offset // Always return a u8
-// }
-
 fn mode() -> String{
     let perf_offset: u8 =  read_ec_register(PERFORMANCE_OFFSET);
     match perf_offset {
@@ -109,24 +101,16 @@ fn mode() -> String{
 
 fn temp_to_performance(temp: u8) -> u8{
     match temp {
-        93 => {
-            write_ec_register(PERFORMANCE_OFFSET, 0x30);
-            
-            93
-        }
+    86..=u8::MAX => {
+        write_ec_register(PERFORMANCE_OFFSET, 0x30);
+        93
+    }
        0..=85 => {
             write_ec_register(PERFORMANCE_OFFSET, 0x31);
             80
         }
-        _ => {
-            0x90
-        }
     }
 }
-
-// fn performance(){
-//	write_ec_register(PERFORMANCE_OFFSET, 0x31);
-//	}
 
 
 // fn enable_bios_control() {
@@ -139,12 +123,10 @@ fn main() {
         exit(1);
     }
 
-     // Perform setup tasks
-     load_ec_sys_module();
-     generate_config_file();
+    // Perform setup tasks
+    load_ec_sys_module();
+    generate_config_file();
 
-    let temp_curve =  [45, 50, 55,  70, 75, 80, 85];
-    let speed_curve = [20, 37, 45,  50, 70, 80, 100];
     let idle_speed = 0;
     let poll_interval = Duration::from_secs(1);
 
@@ -153,20 +135,21 @@ fn main() {
     loop {
         disable_bios_control();
         let temp = get_max_temp();
+        println!("Current temperature: {}°C", temp);
         temp_to_performance(temp);
         let mode = mode();
-        println!("The mode is:{mode}");
-        let speed = if temp <= temp_curve[0] {
-            idle_speed
-        } else if temp >= temp_curve[temp_curve.len() - 1] {
-            speed_curve[speed_curve.len() - 1]
-        } else {
-            let index = temp_curve.iter().position(|&t| t > temp).unwrap();
-            let t0 = temp_curve[index - 1];
-            let t1 = temp_curve[index];
-            let s0 = speed_curve[index - 1];
-            let s1 = speed_curve[index];
-            (s0 as usize + ((s1 - s0) as usize * (temp - t0) as usize / (t1 - t0) as usize)) as u8
+        println!("The mode is: {mode}");
+
+        let speed = match temp {
+            0..=45 => idle_speed,
+            46..=50 => 20,
+            51..=55 => 37,
+            56..=70 => 45,
+            71..=75 => 50,
+            76..=80 => 70,
+            81..=85 => 80,
+            86..93 => 90,
+            _ => 100,
         };
 
         let fan1_speed = ((FAN1_MAX as u16 * speed as u16) / 100) as u8;
