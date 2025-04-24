@@ -23,8 +23,8 @@ fn generate_config_file() {
         println!("Configuration file not found. Generating default config...");
         let default_config = r#"
 [service]
-TEMP_CURVE =  [45, 55, 60, 70, 75, 80, 85, 93]
-SPEED_CURVE = [37, 45, 50, 60, 70, 80, 90, 100]
+TEMP_CURVE = [46, 49, 52, 55, 58, 61, 64, 67, 70, 73, 76, 79, 82, 85, 93]
+SPEED_CURVE = [37, 40, 43, 46, 49, 52, 55, 58, 61, 64, 67, 70, 85, 90, 100]
 IDLE_SPEED = 0
 POLL_INTERVAL = 1
 "#;
