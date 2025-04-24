@@ -8,6 +8,7 @@ use std::fs;
 use std::path::Path;
 
 const EC_IO_FILE: &str = "/sys/kernel/debug/ec/ec0/io";
+const PERFORMANCE_OFFSET: u64 = 0x95;
 const FAN1_OFFSET: u64 = 0x34; // Fan 1 Speed Set (units of 100RPM)
 const FAN2_OFFSET: u64 = 0x35; // Fan 2 Speed Set (units of 100RPM)
 const CPU_TEMP_OFFSET: u64 = 0x57; // CPU Temp (°C)
@@ -83,6 +84,51 @@ fn disable_bios_control() {
     write_ec_register(BIOS_CONTROL_OFFSET, 0x06); // Disable BIOS control
 }
 
+// fn performance() -> u8 {
+//    let perf_offset: u8 =  read_ec_register(PERFORMANCE_OFFSET);
+//    if perf_offset != 0x31 {
+//        write_ec_register(PERFORMANCE_OFFSET, 0x31);
+//    }
+//    perf_offset // Always return a u8
+// }
+
+fn mode() -> String{
+    let perf_offset: u8 =  read_ec_register(PERFORMANCE_OFFSET);
+    match perf_offset {
+        0x30 => {
+            "Normal Mode".to_string()
+        }
+        0x31 => {
+            "Performance Mode".to_string()
+        }
+        _ => {
+            "Undefined Mode".to_string()
+        }
+    }
+}
+
+fn temp_to_performance(temp: u8) -> u8{
+    match temp {
+        93 => {
+            write_ec_register(PERFORMANCE_OFFSET, 0x30);
+            
+            93
+        }
+       0..=85 => {
+            write_ec_register(PERFORMANCE_OFFSET, 0x31);
+            80
+        }
+        _ => {
+            0x90
+        }
+    }
+}
+
+// fn performance(){
+//	write_ec_register(PERFORMANCE_OFFSET, 0x31);
+//	}
+
+
 // fn enable_bios_control() {
 //    write_ec_register(BIOS_CONTROL_OFFSET, 0x00); // Enable BIOS control
 // }
@@ -96,18 +142,20 @@ fn main() {
      // Perform setup tasks
      load_ec_sys_module();
      generate_config_file();
-     disable_bios_control();
 
-    let temp_curve = [45, 55, 60, 70, 75, 80, 85, 93];
-    let speed_curve = [37, 45, 50, 60, 70, 80, 90, 100];
+    let temp_curve =  [45, 50, 55,  70, 75, 80, 85];
+    let speed_curve = [20, 37, 45,  50, 70, 80, 100];
     let idle_speed = 0;
     let poll_interval = Duration::from_secs(1);
 
     let mut previous_speed = (0, 0);
 
     loop {
+        disable_bios_control();
         let temp = get_max_temp();
-
+        temp_to_performance(temp);
+        let mode = mode();
+        println!("The mode is:{mode}");
         let speed = if temp <= temp_curve[0] {
             idle_speed
         } else if temp >= temp_curve[temp_curve.len() - 1] {
