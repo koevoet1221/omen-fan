@@ -4,7 +4,7 @@ use std::process::exit;
 use std::thread::sleep;
 use std::time::Duration;
 use std::process::Command;
-use std::{fs, vec};
+use std::fs;
 use std::path::Path;
 
 const EC_IO_FILE: &str = "/sys/kernel/debug/ec/ec0/io";
@@ -16,23 +16,6 @@ const GPU_TEMP_OFFSET: u64 = 0xB7; // GPU Temp (°C)
 const BIOS_CONTROL_OFFSET: u64 = 0x62; // BIOS Control
 const FAN1_MAX: u8 = 55; // Max speed for Fan 1
 const FAN2_MAX: u8 = 57; // Max speed for Fan 2
-const CONFIG_FILE: &str = "/etc/omen-fan/config.toml";
-
-fn generate_config_file() {
-    if !Path::new(CONFIG_FILE).exists() {
-        println!("Configuration file not found. Generating default config...");
-        let default_config = r#"
-[service]
-TEMP_CURVE = [46, 49, 52, 55, 58, 61, 64, 67, 70, 73, 76, 79, 82, 85, 93]
-SPEED_CURVE = [37, 40, 43, 46, 49, 52, 55, 58, 61, 64, 67, 70, 85, 90, 100]
-IDLE_SPEED = 0
-POLL_INTERVAL = 1
-"#;
-        fs::create_dir_all("/etc/omen-fan").expect("Failed to create config directory.");
-        fs::write(CONFIG_FILE, default_config).expect("Failed to write default config.");
-        println!("Default configuration file created at {}", CONFIG_FILE);
-    }
-}
 
 fn load_ec_sys_module() {
     // Check if the `ec_sys` module is loaded
@@ -125,7 +108,6 @@ fn main() {
 
     // Perform setup tasks
     load_ec_sys_module();
-    generate_config_file();
 
     let idle_speed = 0;
     let poll_interval = Duration::from_secs(1);
