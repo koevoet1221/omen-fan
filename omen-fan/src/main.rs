@@ -22,6 +22,10 @@ fn load_ec_sys_module() {
     let output = Command::new("lsmod")
         .output()
         .expect("Failed to execute `lsmod` command.");
+
+    let lsmod_output = String::from_utf8_lossy(&output.stdout);
+    println!("lsmod output:\n{}", lsmod_output);
+
     if !String::from_utf8_lossy(&output.stdout).contains("ec_sys") {
         // Load the `ec_sys` module with write support
         Command::new("modprobe")
